@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 import {
   addCheckIn,
   allDates,
+  deleteCheckIn,
   findByDate,
   getDataVersion,
   listCheckIns,
+  updateCheckIn,
 } from "./store.js";
 import { computeStreaks } from "./streaks.js";
 
@@ -40,6 +42,8 @@ export const typeDefs = `#graphql
 
   type Mutation {
     createCheckIn(date: String, mood: Int!, note: String): CheckIn!
+    updateCheckIn(id: ID!, mood: Int, note: String): CheckIn!
+    deleteCheckIn(id: ID!): CheckIn!
   }
 `;
 
@@ -79,6 +83,35 @@ export const resolvers = {
         mood: args.mood,
         note: args.note,
       });
+    },
+
+    updateCheckIn: (
+      _: unknown,
+      args: { id: string; mood?: number | null; note?: string | null },
+    ) => {
+      if (args.mood != null) {
+        if (!Number.isInteger(args.mood) || args.mood < 1 || args.mood > 5) {
+          throw new GraphQLError("Mood must be 1–5");
+        }
+      }
+
+      const patch: { mood?: number; note?: string | null } = {};
+      if (args.mood != null) patch.mood = args.mood;
+      if (args.note !== undefined) patch.note = args.note;
+
+      const updated = updateCheckIn(args.id, patch);
+      if (!updated) {
+        throw new GraphQLError("Check-in not found");
+      }
+      return updated;
+    },
+
+    deleteCheckIn: (_: unknown, args: { id: string }) => {
+      const removed = deleteCheckIn(args.id);
+      if (!removed) {
+        throw new GraphQLError("Check-in not found");
+      }
+      return removed;
     },
   },
 };

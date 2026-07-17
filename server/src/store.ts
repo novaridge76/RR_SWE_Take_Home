@@ -96,6 +96,10 @@ export function findByDate(date: string): CheckIn | undefined {
   return store.checkIns.find((c) => c.date === date);
 }
 
+export function findById(id: string): CheckIn | undefined {
+  return store.checkIns.find((c) => c.id === id);
+}
+
 export function addCheckIn(input: {
   id: string;
   date: string;
@@ -112,6 +116,28 @@ export function addCheckIn(input: {
   store.checkIns.push(row);
   save();
   return row;
+}
+
+export function updateCheckIn(
+  id: string,
+  patch: { mood?: number; note?: string | null },
+): CheckIn | null {
+  const row = store.checkIns.find((c) => c.id === id);
+  if (!row) return null;
+
+  if (patch.mood !== undefined) row.mood = patch.mood;
+  if (patch.note !== undefined) row.note = patch.note;
+  save();
+  return row;
+}
+
+export function deleteCheckIn(id: string): CheckIn | null {
+  const index = store.checkIns.findIndex((c) => c.id === id);
+  if (index === -1) return null;
+
+  const [removed] = store.checkIns.splice(index, 1);
+  save();
+  return removed;
 }
 
 export function seedIfEmpty() {
