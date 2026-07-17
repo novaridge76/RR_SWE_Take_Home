@@ -284,6 +284,34 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+button.danger {
+  background: #fff;
+  color: #8f2d2d;
+  border: 1px solid #e3b4b4;
+}
+
+button.linkish {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  width: fit-content;
+  text-align: left;
+  font-weight: inherit;
+}
+
+button.linkish:hover strong {
+  text-decoration: underline;
+}
+
 .ok {
   margin: 0;
   color: #1f6b3a;
