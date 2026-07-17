@@ -5,6 +5,11 @@ type CheckIn = {
   note: string | null;
 };
 
+type StreakSummary = {
+  current: number;
+  longest: number;
+};
+
 const MOOD_LABELS: Record<number, string> = {
   1: "Rough",
   2: "Low",
@@ -13,26 +18,15 @@ const MOOD_LABELS: Record<number, string> = {
   5: "Great",
 };
 
-async function fetchCheckIns(): Promise<CheckIn[]> {
+async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch("/graphql", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query: `
-        query {
-          checkIns(limit: 20) {
-            id
-            date
-            mood
-            note
-          }
-        }
-      `,
-    }),
+    body: JSON.stringify({ query, variables }),
   });
 
   const json = (await res.json()) as {
-    data?: { checkIns: CheckIn[] };
+    data?: T;
     errors?: Array<{ message: string }>;
   };
 
@@ -42,12 +36,45 @@ async function fetchCheckIns(): Promise<CheckIn[]> {
   if (!json.data) {
     throw new Error("No data from API");
   }
-  return json.data.checkIns;
+  return json.data;
 }
 
-export async function loadCheckIns() {
-  return fetchCheckIns();
+export async function loadDashboard() {
+  return gql<{ checkIns: CheckIn[]; streakSummary: StreakSummary }>(`
+    query {
+      streakSummary { current longest }
+      checkIns(limit: 20) {
+        id
+        date
+        mood
+        note
+      }
+    }
+  `);
+}
+
+export async function createCheckIn(input: {
+  mood: number;
+  note?: string;
+}) {
+  const data = await gql<{ createCheckIn: CheckIn }>(
+    `
+      mutation CreateCheckIn($mood: Int!, $note: String) {
+        createCheckIn(mood: $mood, note: $note) {
+          id
+          date
+          mood
+          note
+        }
+      }
+    `,
+    {
+      mood: input.mood,
+      note: input.note || null,
+    },
+  );
+  return data.createCheckIn;
 }
 
 export { MOOD_LABELS };
-export type { CheckIn };
+export type { CheckIn, StreakSummary };
