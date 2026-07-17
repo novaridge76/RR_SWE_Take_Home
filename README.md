@@ -1,90 +1,61 @@
 # DayMark
 
-A small full-stack app for daily mood check-ins with streak tracking.
+Daily mood check-in app with streaks.
 
-I built this for a take-home exercise. I wanted something useful that still had real business logic on the server — not only CRUD.
+I built this for the take-home. Kept it small: React frontend, GraphQL API, JSON file for storage.
 
-## What it does
+## Features
 
-- Check in once per calendar day (mood 1–5, optional note)
-- See current streak and longest streak
-- Pick past days on a calendar (days are colored by mood)
-- See a simple mood trend chart
-- Data is stored in a JSON file and survives restart
-- If you edit `server/data/daymark.json` by hand, the API reloads it and the UI catches up within a couple of seconds
+- Check in once a day (mood 1-5 + optional note)
+- Edit or delete a check-in (click the day on the calendar)
+- Current streak + longest streak
+- Calendar and a simple mood chart
+- Data lives in `server/data/daymark.json` (survives restart)
+- If you edit that file by hand, the UI updates after a couple seconds
 
-### Streak rule
+### How streaks work
 
-- One check-in per day (`YYYY-MM-DD`)
-- **Current streak** is consecutive days ending on **today** or **yesterday** (so not checking in yet today doesn’t break yesterday’s streak)
-- Missing a full day resets the current streak
-- **Longest streak** is the best consecutive run in the history
-- Future dates and duplicate days are rejected
+A streak is consecutive days with a check-in. Current streak still counts if your last check-in was yesterday (so you don't lose it just because you haven't checked in yet today). Miss a day and current resets; longest stays.
 
-Days use the server’s local timezone for this demo.
-
-## Stack
-
-| Layer | Choice |
-| --- | --- |
-| Frontend | React + TypeScript (Vite) |
-| API | GraphQL (Apollo Server) |
-| Client ↔ API | `fetch` to GraphQL (Vite proxies `/graphql`) |
-| Persistence | JSON file on disk |
-
-I kept the client on plain `fetch` instead of adding Apollo Client + TanStack Query. For this size of app it was enough, and it kept the dependency surface smaller.
-
-## Setup
-
-Node 20+ recommended.
+## Run it
 
 ```bash
 npm install
 npm run dev
 ```
 
-- App: http://127.0.0.1:5173/
-- GraphQL: http://localhost:4000/
+- UI: [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
+- API: [http://localhost:4000/](http://localhost:4000/)
 
-Or separately:
-
-```bash
-npm run dev:server
-npm run dev:client
-```
-
-### Tests
+Tests:
 
 ```bash
 npm run test
 ```
 
-Runs the streak unit tests on the server.
 
-## Project layout
+
+## Stack
+
+- Client: React + TypeScript (Vite)
+- Server: Apollo GraphQL
+- DB: JSON file (simple, no setup)
+
+I used plain `fetch` on the client instead of Apollo Client. Fine for this size.
+
+## Folder layout
 
 ```
-client/   React UI (calendar, chart, check-in form)
-server/   GraphQL API + JSON store + streak logic
+client/  - UI
+server/  - API + streak logic + JSON store
 ```
 
-On first run the server seeds a short sample history so longest streak is visible before you check in today. Runtime data lives in `server/data/daymark.json` (gitignored).
 
-## Why I structured it this way
 
-- Streak math lives in `server/src/streaks.ts` so the rule is enforced in one place
-- JSON persistence was intentional — durable enough for the exercise, and it avoids native SQLite build tools on Windows
-- I developed `server` and `client` on separate branches and merged into `main` so the history shows backend and frontend work in parallel
+## If I had more time
 
-## What I’d do with more time
-
-- Auth and multiple users (with per-user timezones)
-- More than one habit/streak type
-- Better charts / a year heatmap
+- Login / multiple users
 - Reminders
-- Stronger tests around midnight and DST
-- Deploy somewhere and maybe move to Postgres
+- Better charts
+- Deploy it
 
-## Timebox
-
-I stopped at a working vertical slice: persist check-ins, compute streaks on the API, and a UI that can read/write and stay in sync when the data file changes.
