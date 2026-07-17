@@ -4,6 +4,7 @@ import {
   addCheckIn,
   allDates,
   findByDate,
+  getDataVersion,
   listCheckIns,
 } from "./store.js";
 import { computeStreaks } from "./streaks.js";
@@ -34,6 +35,7 @@ export const typeDefs = `#graphql
     health: String!
     checkIns(limit: Int = 30): [CheckIn!]!
     streakSummary: StreakSummary!
+    dataVersion: Int!
   }
 
   type Mutation {
@@ -47,6 +49,7 @@ export const resolvers = {
     checkIns: (_: unknown, args: { limit?: number }) =>
       listCheckIns(args.limit ?? 30),
     streakSummary: () => computeStreaks(allDates(), todayKey()),
+    dataVersion: () => getDataVersion(),
   },
 
   Mutation: {

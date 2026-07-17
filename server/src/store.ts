@@ -18,6 +18,14 @@ const dataDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../data
 const dbFile = path.join(dataDir, "daymark.json");
 
 let store: Store = { checkIns: [] };
+let version = 0;
+let writing = false;
+let watchReady = false;
+let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function getDataVersion() {
+  return version;
+}
 
 export function initStore() {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -25,9 +33,14 @@ export function initStore() {
   if (!fs.existsSync(dbFile)) {
     store = { checkIns: [] };
     save();
-    return;
+  } else {
+    loadFromDisk();
   }
 
+  watchFile();
+}
+
+function loadFromDisk() {
   const raw = fs.readFileSync(dbFile, "utf8");
   const parsed = JSON.parse(raw) as Store;
   store = {
@@ -36,7 +49,37 @@ export function initStore() {
 }
 
 function save() {
+  writing = true;
   fs.writeFileSync(dbFile, JSON.stringify(store, null, 2), "utf8");
+  version += 1;
+  setTimeout(() => {
+    writing = false;
+  }, 150);
+}
+
+function watchFile() {
+  if (watchReady) return;
+  watchReady = true;
+
+  try {
+    fs.watch(dbFile, () => {
+      if (writing) return;
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        reloadTimer = null;
+        if (writing || !fs.existsSync(dbFile)) return;
+        try {
+          loadFromDisk();
+          version += 1;
+          console.log(`reloaded daymark.json (v${version})`);
+        } catch (err) {
+          console.warn("failed to reload data file", err);
+        }
+      }, 100);
+    });
+  } catch (err) {
+    console.warn("could not watch data file", err);
+  }
 }
 
 export function listCheckIns(limit = 30): CheckIn[] {
