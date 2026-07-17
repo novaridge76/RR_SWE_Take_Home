@@ -1,21 +1,14 @@
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
+import { resolvers, typeDefs } from "./schema.js";
+import { initStore, seedIfEmpty } from "./store.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 
-const typeDefs = `#graphql
-  type Query {
-    health: String!
-  }
-`;
-
-const resolvers = {
-  Query: {
-    health: () => "DayMark API is running",
-  },
-};
-
 async function main() {
+  initStore();
+  seedIfEmpty();
+
   const server = new ApolloServer({
     typeDefs,
     resolvers,
@@ -25,7 +18,7 @@ async function main() {
     listen: { port: PORT },
   });
 
-  console.log(`DayMark GraphQL API ready at ${url}`);
+  console.log(`API ready at ${url}`);
 }
 
 main().catch((err) => {
