@@ -86,5 +86,45 @@ export async function createCheckIn(input: {
   return data.createCheckIn;
 }
 
+export async function updateCheckIn(input: {
+  id: string;
+  mood: number;
+  note?: string;
+}) {
+  const data = await gql<{ updateCheckIn: CheckIn }>(
+    `
+      mutation UpdateCheckIn($id: ID!, $mood: Int, $note: String) {
+        updateCheckIn(id: $id, mood: $mood, note: $note) {
+          id
+          date
+          mood
+          note
+        }
+      }
+    `,
+    {
+      id: input.id,
+      mood: input.mood,
+      note: input.note || null,
+    },
+  );
+  return data.updateCheckIn;
+}
+
+export async function deleteCheckIn(id: string) {
+  const data = await gql<{ deleteCheckIn: CheckIn }>(
+    `
+      mutation DeleteCheckIn($id: ID!) {
+        deleteCheckIn(id: $id) {
+          id
+          date
+        }
+      }
+    `,
+    { id },
+  );
+  return data.deleteCheckIn;
+}
+
 export { MOOD_LABELS };
 export type { CheckIn, StreakSummary };

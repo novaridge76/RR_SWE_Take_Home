@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createCheckIn,
+  deleteCheckIn,
   loadDashboard,
   MOOD_LABELS,
+  updateCheckIn,
   type CheckIn,
   type StreakSummary,
 } from "./api";
@@ -68,26 +70,64 @@ export default function App() {
     };
   }, []);
 
+  // When selecting a day that already has a check-in, load its values into the form.
+  useEffect(() => {
+    if (existing) {
+      setMood(existing.mood);
+      setNote(existing.note ?? "");
+    } else {
+      setMood(3);
+      setNote("");
+    }
+  }, [existing]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (existing) return;
+    setSaving(true);
+    setFormError(null);
+    setSavedMsg(null);
+
+    try {
+      if (existing) {
+        await updateCheckIn({
+          id: existing.id,
+          mood,
+          note: note.trim() || undefined,
+        });
+        setSavedMsg("Updated.");
+      } else {
+        await createCheckIn({
+          mood,
+          note: note.trim() || undefined,
+          date: selectedDate,
+        });
+        setSavedMsg("Checked in.");
+      }
+      await refresh();
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Could not save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!existing) return;
+    const ok = window.confirm(`Delete check-in for ${existing.date}?`);
+    if (!ok) return;
 
     setSaving(true);
     setFormError(null);
     setSavedMsg(null);
 
     try {
-      await createCheckIn({
-        mood,
-        note: note.trim() || undefined,
-        date: selectedDate,
-      });
-      setNote("");
+      await deleteCheckIn(existing.id);
       setMood(3);
-      setSavedMsg("Checked in.");
+      setNote("");
+      setSavedMsg("Deleted.");
       await refresh();
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : "Could not save");
+      setFormError(err instanceof Error ? err.message : "Could not delete");
     } finally {
       setSaving(false);
     }
@@ -128,57 +168,65 @@ export default function App() {
 
         <section className="panel form-panel">
           <p className="section">
-            {isToday ? "Today's check-in" : `Check-in · ${selectedDate}`}
+            {existing
+              ? isToday
+                ? "Edit today's check-in"
+                : `Edit · ${selectedDate}`
+              : isToday
+                ? "Today's check-in"
+                : `Check-in · ${selectedDate}`}
           </p>
 
-          {existing ? (
-            <div>
-              <p className="muted">Already checked in for this day.</p>
-              <p>
-                Mood {existing.mood} · {MOOD_LABELS[existing.mood]}
-              </p>
-              {existing.note && <p>{existing.note}</p>}
+          <form className="form bare" onSubmit={onSubmit}>
+            <div className="moods">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <label
+                  key={value}
+                  className={mood === value ? "mood selected" : "mood"}
+                >
+                  <input
+                    type="radio"
+                    name="mood"
+                    value={value}
+                    checked={mood === value}
+                    onChange={() => setMood(value)}
+                  />
+                  <span className="n">{value}</span>
+                  <span className="t">{MOOD_LABELS[value]}</span>
+                </label>
+              ))}
             </div>
-          ) : (
-            <form className="form bare" onSubmit={onSubmit}>
-              <div className="moods">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <label
-                    key={value}
-                    className={mood === value ? "mood selected" : "mood"}
-                  >
-                    <input
-                      type="radio"
-                      name="mood"
-                      value={value}
-                      checked={mood === value}
-                      onChange={() => setMood(value)}
-                    />
-                    <span className="n">{value}</span>
-                    <span className="t">{MOOD_LABELS[value]}</span>
-                  </label>
-                ))}
-              </div>
 
-              <label className="field">
-                Note (optional)
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={3}
-                  maxLength={280}
-                  placeholder="Anything worth remembering…"
-                />
-              </label>
+            <label className="field">
+              Note (optional)
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={3}
+                maxLength={280}
+                placeholder="Anything worth remembering…"
+              />
+            </label>
 
-              {formError && <p className="error">{formError}</p>}
-              {savedMsg && <p className="ok">{savedMsg}</p>}
+            {formError && <p className="error">{formError}</p>}
+            {savedMsg && <p className="ok">{savedMsg}</p>}
 
+            <div className="actions">
               <button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Check in"}
+                {saving ? "Saving…" : existing ? "Save changes" : "Check in"}
               </button>
-            </form>
-          )}
+              {existing && (
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={saving}
+                  onClick={() => void onDelete()}
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+          </form>
         </section>
       </div>
 
@@ -195,7 +243,17 @@ export default function App() {
       <ul className="list">
         {checkIns.map((item) => (
           <li key={item.id}>
-            <strong>{item.date}</strong>
+            <button
+              type="button"
+              className="linkish"
+              onClick={() => {
+                setSelectedDate(item.date);
+                setFormError(null);
+                setSavedMsg(null);
+              }}
+            >
+              <strong>{item.date}</strong>
+            </button>
             <span>
               Mood {item.mood} · {MOOD_LABELS[item.mood] ?? "—"}
             </span>
