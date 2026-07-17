@@ -2,9 +2,11 @@ import { GraphQLError } from "graphql";
 import { randomUUID } from "node:crypto";
 import {
   addCheckIn,
+  allDates,
   findByDate,
   listCheckIns,
 } from "./store.js";
+import { computeStreaks } from "./streaks.js";
 
 function todayKey() {
   const now = new Date();
@@ -23,9 +25,15 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  type StreakSummary {
+    current: Int!
+    longest: Int!
+  }
+
   type Query {
     health: String!
     checkIns(limit: Int = 30): [CheckIn!]!
+    streakSummary: StreakSummary!
   }
 
   type Mutation {
@@ -38,6 +46,7 @@ export const resolvers = {
     health: () => "ok",
     checkIns: (_: unknown, args: { limit?: number }) =>
       listCheckIns(args.limit ?? 30),
+    streakSummary: () => computeStreaks(allDates(), todayKey()),
   },
 
   Mutation: {

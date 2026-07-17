@@ -45,6 +45,10 @@ export function listCheckIns(limit = 30): CheckIn[] {
     .slice(0, limit);
 }
 
+export function allDates(): string[] {
+  return store.checkIns.map((c) => c.date);
+}
+
 export function findByDate(date: string): CheckIn | undefined {
   return store.checkIns.find((c) => c.date === date);
 }
