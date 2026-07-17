@@ -18,7 +18,10 @@ const MOOD_LABELS: Record<number, string> = {
   5: "Great",
 };
 
-async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+async function gql<T>(
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<T> {
   const res = await fetch("/graphql", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -40,10 +43,15 @@ async function gql<T>(query: string, variables?: Record<string, unknown>): Promi
 }
 
 export async function loadDashboard() {
-  return gql<{ checkIns: CheckIn[]; streakSummary: StreakSummary }>(`
+  return gql<{
+    dataVersion: number;
+    checkIns: CheckIn[];
+    streakSummary: StreakSummary;
+  }>(`
     query {
+      dataVersion
       streakSummary { current longest }
-      checkIns(limit: 20) {
+      checkIns(limit: 90) {
         id
         date
         mood
@@ -56,11 +64,12 @@ export async function loadDashboard() {
 export async function createCheckIn(input: {
   mood: number;
   note?: string;
+  date?: string;
 }) {
   const data = await gql<{ createCheckIn: CheckIn }>(
     `
-      mutation CreateCheckIn($mood: Int!, $note: String) {
-        createCheckIn(mood: $mood, note: $note) {
+      mutation CreateCheckIn($mood: Int!, $note: String, $date: String) {
+        createCheckIn(mood: $mood, note: $note, date: $date) {
           id
           date
           mood
@@ -71,6 +80,7 @@ export async function createCheckIn(input: {
     {
       mood: input.mood,
       note: input.note || null,
+      date: input.date || null,
     },
   );
   return data.createCheckIn;
